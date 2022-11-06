@@ -1,0 +1,51 @@
+{
+    "name": "fo-cli",
+    "version": "1.0.0",
+    "description": "frontendOnly cli",
+    "main": "core/index.js",
+    "files": [
+        "dist"
+    ],
+    "repository": {
+        "type": "github",
+        "url": "github+https://github.com/gojecks/fo-cli.git"
+    },
+    "keywords": [
+        "frontendonly",
+        "javascript",
+        "frontend",
+        "jelidb"
+    ],
+    "author": "Gojecks",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/gojecks/fo-cli.git/issues"
+    },
+    "homepage": "https://github.com/gojecks/fo-cli.git#readme",
+    "devDependencies": {
+        "jasmine": "^3.3.1",
+        "jasmine-node": "^2.0.1",
+        "karma": "^4.0.1",
+        "karma-chrome-launcher": "0.1.12",
+        "karma-coverage": "0.5.3",
+        "karma-firefox-launcher": "0.1.7",
+        "karma-ie-launcher": "0.1.5",
+        "karma-jasmine": "0.1.6",
+        "karma-junit-reporter": "0.2.2",
+        "karma-phantomjs-launcher": "^1.0.4",
+        "karma-sauce-launcher": "^2.0.2",
+        "karma-script-launcher": "0.1.0",
+        "karma-sinon-chai": "0.2.0",
+        "karma-story-reporter": "0.2.2",
+        "mocha": "^5.2.0"
+    },
+    "scripts": {
+        "testjdb": "mocha './test/**/*.spec.js'",
+        "fcli": "node ./index.js"
+    },
+    "dependencies": {
+        "archiver": "^5.3.1",
+        "btoa": "^1.2.1",
+        "inquirer": "^8.0.0"
+    }
+}

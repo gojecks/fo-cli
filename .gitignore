@@ -1,0 +1,10 @@
+/target/
+npm-debug.log
+node_modules
+dist
+# System Files
+.DS_Store
+Thumbs.db
+*.zip
+.jeli.session
+.focli
