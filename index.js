@@ -9,9 +9,9 @@ try {
             console.error(`${actionName} does not exist please try the following options: ${Object.keys(cmd)}`);
             throw null;
         }
-        cmd[actionName]();
+        cmd[actionName](env.args);
     } else if (typeof cmd == 'function') {
-        cmd();
+        cmd(env.args);
     } else {
         console.error(`please try the following options: ${Object.keys(cmd)}`);
     }

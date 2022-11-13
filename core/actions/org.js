@@ -86,7 +86,7 @@ exports.rm = async() => {
 }
 
 exports.load = async() => {
-    const sessionData = session.get();
+    const sessionData = session.get(true);
     const orgs = await fetch([{ email: sessionData.userInfo.email }], { tableName: "organisation" })
         .catch(console.log);
     if (orgs) {

@@ -43,6 +43,7 @@ module.exports = () => new Promise(async(resolve, reject) => {
         }
     }, null, true);
     httpRequestClient.httpClient(httpRequest).then(response => {
+        console.log(`User authorized: ${response.userInfo.email}`)
         session.store(response);
         resolve(true);
     }, (err) => (console.error(err), reject(false)));

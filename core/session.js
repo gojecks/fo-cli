@@ -1,25 +1,30 @@
 const fs = require('fs');
-const path = '.jeli.session';
+const utils = require('./utils');
+const filePath = '.session';
 const env = require('./env');
 let cacheData = null;
-module.exports = {
-    store: (data) => {
-        let rec = this.get() || {};
-        rec[env.env] = data;
-        cacheData = data;
-        fs.writeFileSync(path, JSON.stringify(rec, null, 3));
-    },
-    get: () => {
-        if (!cacheData) {
-            try {
-                let sessionData = fs.readFileSync(path, 'utf-8');
-                if (sessionData) {
-                    sessionData = JSON.parse(sessionData);
-                }
-                cacheData = sessionData[env.env] || null;
-            } catch (e) {}
-        }
 
-        return cacheData;
-    }
+exports.store = (data) => {
+    let rec = this.get() || {};
+    rec[env.env] = data;
+    cacheData = data;
+    utils.writeFile(filePath, rec, true);
 };
+
+exports.get = (destroyProcess) => {
+    if (!cacheData) {
+        try {
+            let sessionData = utils.getFile(filePath, true);
+            if (sessionData) {
+                cacheData = sessionData[env.env] || null;
+            }
+        } catch (e) {
+            if (destroyProcess) {
+                console.log(`No active session, please login and try again`);
+                process.exit(0);
+            }
+        }
+    }
+
+    return cacheData;
+}
