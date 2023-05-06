@@ -3,8 +3,10 @@ const utils = require('../utils');
 const foJson = utils.foJson.get();
 const { prompt, orgAndAppQuest } = require('../prompt');
 
-exports.load = async() => {
-    const orgAndApp = await orgAndAppQuest(foJson);
+const getAppApis = orgAndApp => foJson[orgAndApp.organisation].apps[orgAndApp.appName].apis;
+
+exports.load = async(organisation, appName) => {
+    const orgAndApp = await orgAndAppQuest(foJson, false, {organisation, appName});
     const response = await httpClient('GET', '/application/api', null, orgAndApp)
         .catch(console.log);
 
@@ -13,7 +15,7 @@ exports.load = async() => {
     }
 }
 
-exports.create = async() => {
+exports.create = async(organisation, appName) => {
     const questions = [{
             type: "list",
             name: "METHOD",
@@ -75,9 +77,9 @@ exports.create = async() => {
         }
     ];
 
+    const orgAndApp = await orgAndAppQuest(foJson, false, {organisation, appName});
     const postData = await prompt(questions);
     postData.METHOD = postData.METHOD.toLowerCase();
-    const orgAndApp = await orgAndAppQuest(foJson);
     const response = await httpClient('POST', '/application/api/create', postData, orgAndApp)
         .catch(console.log);
 
@@ -87,9 +89,9 @@ exports.create = async() => {
     }
 }
 
-exports.rm = async() => {
-    const orgAndApp = await orgAndAppQuest(foJson);
-    const apis = foJson[orgAndApp.organisation].apps[orgAndApp.appName].apis;
+exports.rm = async(organisation, appName) => {
+    const orgAndApp = await orgAndAppQuest(foJson, false, {organisation, appName});
+    const apis = getAppApis(orgAndApp);
     if (apis && apis.length) {
         const choices = apis.map(api => `${api.METHOD}${api.URL}`);
         const { api } = await prompt({
@@ -107,6 +109,19 @@ exports.rm = async() => {
         }
     } else {
         console.log(`No apis created yet, please load from server or create a new one`);
+    }
+}
+
+/**
+ * 
+ * @param {*} organisation 
+ * @param {*} appName 
+ */
+exports.list  = async(organisation, appName) => {
+    const orgAndApp = await orgAndAppQuest(foJson, false, {organisation, appName});
+    const apis = getAppApis(orgAndApp);
+    if (apis){
+        console.log(apis);
     }
 }
 

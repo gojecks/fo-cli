@@ -6,8 +6,8 @@ const foJson = utils.foJson.get();
 const folderEntry = '.focli/';
 
 
-exports.load = async() => {
-    const answers = await orgAndAppQuest(foJson);
+exports.load = async(organisation, appName) => {
+    const answers = await orgAndAppQuest(foJson, false, {organisation, appName});
     const directoryPath = `${folderEntry}${answers.organisation}/${answers.appName}`;
     fs.mkdirSync(directoryPath, { recursive: true });
     httpClient('GET', '/cms/directory', null, answers)

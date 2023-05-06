@@ -19,8 +19,8 @@ exports.httpRequestObject = (method, path, body, appInfo, basicMode) => {
     const appName = appInfo.appName || env.config.appName;
     const headers = ({
         'User-Agent': 'JELI-CLI',
-        'Authorization': `${(!sessionData || basicMode) ? 'Basic' :'Bearer'} ${accessToken}`,
         'Content-Type': 'application/json',
+        'Authorization': `${(!sessionData || basicMode) ? 'Basic' :'Bearer'} ${accessToken}`,
         'X-APP-NAME': appName,
         'X-APP-ORGANISATION': appInfo.organisation || env.config.organisation,
         'origin': env.config.origin
@@ -31,7 +31,7 @@ exports.httpRequestObject = (method, path, body, appInfo, basicMode) => {
     }
 
     var httpRequest = ({ method, uri: `${env.config.apiHost}${path}`, headers });
-    var sec = { _h: "nds:4111", _r: btoa(`${appName}:${appInfo.tableName}:${+new  Date}:`) };
+    var sec = { _r: btoa(`${appName}:${appInfo.tableName}:${+new  Date}:`) };
     if (method.toLowerCase() === 'get') {
         httpRequest.qs = Object.assign(sec, body);
         // httpRequest.useQuerystring = true;
@@ -46,6 +46,11 @@ exports.httpRequestObject = (method, path, body, appInfo, basicMode) => {
     }
 
     return httpRequest;
+}
+
+exports.setAuthorization = httpRequest  => {
+    const token = session.getKey('tokens');
+    httpRequest.headers['Authorization'] = `Bearer ${token.bearer}`;
 }
 
 exports.httpClient = httpRequest => new Promise((resolve, reject) => {

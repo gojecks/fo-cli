@@ -8,8 +8,8 @@ const logApi = '/application/logs';
 /**
  * pass --searchCriteria to search logs for details
  */
-exports.get = async() => {
-    const appInfo = await orgAndAppQuest(foJson);
+exports.get = async(organisation, appName) => {
+    const appInfo = await orgAndAppQuest(foJson, false, {organisation, appName});
     const response = await httpClient('GET', logApi, {
             query: {
                 searchCriteria: env.args.searchCriteria
@@ -22,8 +22,8 @@ exports.get = async() => {
     }
 }
 
-exports.clear = async() => {
-    const appInfo = await orgAndAppQuest(foJson);
+exports.clear = async(organisation, appName) => {
+    const appInfo = await orgAndAppQuest(foJson, false, {organisation, appName});
     const response = await httpClient('DELETE', logApi + '/remove', {}, appInfo)
         .catch(console.log);
 }

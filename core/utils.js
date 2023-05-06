@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const jeliFolderPath = './.focli/';
+const jeliFolderPath = './node_modules/.focliCache/';
 const foJsonPath = path.join(jeliFolderPath, 'fo.json');
 exports.foJson = {
     get: () => {
@@ -22,8 +22,12 @@ exports.foJson = {
 exports.getPath = (...args) => path.join.apply(path, [jeliFolderPath].concat(args));
 
 exports.getFile = (filePath, toJSON = false) => {
+    return this.readFile(this.getPath(filePath), toJSON);
+};
+
+exports.readFile = (filePath, toJSON = false) => {
     try {
-        const file = fs.readFileSync(this.getPath(filePath), 'utf-8');
+        const file = fs.readFileSync(filePath, 'utf-8');
         return (toJSON ? JSON.parse(file) : file);
     } catch (e) {
         return null;

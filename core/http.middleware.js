@@ -10,8 +10,10 @@ module.exports = (httpRequest) => {
         return new Promise((resolve, reject) => {
             console.log(`authenticating user before making request..`);
             authenticate().then(() => {
+                httpRequestClient.setAuthorization(httpRequest);
                 httpRequestClient.httpClient(httpRequest).then(resolve, reject);
             }).catch(err => {
+                console.log(err)
                 console.log(`Unable to complete request due to authentication error, please try again`);
             });
         });

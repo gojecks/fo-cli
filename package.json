@@ -1,5 +1,5 @@
 {
-    "name": "fo-cli",
+    "name": "@jeli/fo-cli",
     "version": "1.0.0",
     "description": "frontendOnly cli",
     "main": "core/index.js",
@@ -30,6 +30,8 @@
     "dependencies": {
         "archiver": "^5.3.1",
         "btoa": "^1.2.1",
-        "inquirer": "^8.0.0"
+        "inquirer": "^8.0.0",
+        "minimist": "^1.2.0",
+        "request": "^2.88.0"
     }
 }

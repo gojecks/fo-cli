@@ -1,9 +1,9 @@
 const { prompt } = require('../prompt');
 const session = require('../session');
 const httpRequestClient = require('../http.request');
-module.exports = () => new Promise(async(resolve, reject) => {
+module.exports = (force) => new Promise(async(resolve, reject) => {
     var sessionData = session.get();
-    if (sessionData) {
+    if (sessionData && !force) {
         if ((+new Date) > sessionData.tokens.expires_at) {
             // get a new token
             console.info('reauthorizing...');
@@ -13,7 +13,7 @@ module.exports = () => new Promise(async(resolve, reject) => {
                 }
             }, null, true);
             httpRequestClient.httpClient(httpRequest).then(tokens => {
-                sessionData.tokens = tokens.tokens;
+                Object.assign(sessionData, tokens);
                 session.store(sessionData);
                 resolve(true);
             }, err => reject(false));

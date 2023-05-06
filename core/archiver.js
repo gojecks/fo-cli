@@ -9,6 +9,11 @@ module.exports = (config) => {
         });
         const sourceDir = config.dirPath || 'dist';
         const destPath = config.destPath || 'dist';
+        
+        if (!fs.existsSync(sourceDir)){
+            throw new Error(`Source doesn't exists ${sourceDir}`);
+        }
+
         output.on('close', function() {
             resolve(true);
         });

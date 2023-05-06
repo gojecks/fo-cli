@@ -101,8 +101,8 @@ exports.new = async() => {
     }
 }
 
-exports.rm = async() => {
-    const orgAndApp = await orgAndAppQuest(foJson);
+exports.rm = async(organisation, appName) => {
+    const orgAndApp = await orgAndAppQuest(foJson, false, {organisation, appName});
     console.log(`deleting app ${orgAndApp.appName}...`);
     const response = await push(foJson[orgAndApp.organisation].apps[orgAndApp.appName].id, 'delete', {
         tableName: 'user_db'
@@ -116,8 +116,8 @@ exports.rm = async() => {
     }
 }
 
-exports.info = async() => {
-    const orgAndApp = await orgAndAppQuest(foJson);
+exports.info = async(organisation, appName) => {
+    const orgAndApp = await orgAndAppQuest(foJson, false, {organisation, appName});
     const response = await httpClient('GET', '/application/info', null, orgAndApp)
         .catch(console.log);
 
@@ -126,8 +126,8 @@ exports.info = async() => {
     }
 }
 
-exports.conf = async() => {
-    const orgAndApp = await orgAndAppQuest(foJson);
+exports.conf = async(organisation, appName) => {
+    const orgAndApp = await orgAndAppQuest(foJson, false, {organisation, appName});
     const appData = foJson[orgAndApp.organisation].apps[orgAndApp.appName];
     const postData = await prompt([{
             type: "input",
@@ -162,9 +162,9 @@ exports.conf = async() => {
     }
 }
 
-exports.load = async() => {
-    const { organisation } = await orgAndAppQuest(foJson, true);
-    const apps = await fetch([{ organisation }], { tableName: "user_db" })
+exports.load = async(organisation) => {
+    const orgResponse = await orgAndAppQuest(foJson, true, {organisation});
+    const apps = await fetch([orgResponse], { tableName: "user_db" })
         .catch(console.log);
     if (apps) {
         apps.forEach(app => {
