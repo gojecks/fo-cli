@@ -6,6 +6,13 @@ const push = require('../apis/push');
 const { prompt } = require('../prompt');
 const fetch = require('../apis/fetch');
 
+function getOrgByEnv(){
+    const orgs = Object.keys(foJson);
+    const sessionData = session.get(true);
+    const userId = sessionData.userId;
+    return orgs.filter(org  => foJson[org].UID == userId);
+}
+
 exports.new = async() => {
     const numRows = require('../apis/num_rows');
     const answers = await prompt([{
@@ -51,10 +58,11 @@ exports.new = async() => {
 }
 
 exports.rm = async() => {
+    const orgByEnv = getOrgByEnv();
     const answers = await prompt([{
         type: "list",
         name: "organisation",
-        choices: Object.keys(foJson),
+        choices: orgByEnv,
         "message": "Select organisation to delete"
     }]);
 
@@ -87,7 +95,8 @@ exports.rm = async() => {
 
 exports.load = async() => {
     const sessionData = session.get(true);
-    const orgs = await fetch([{ email: sessionData.userInfo.email }], { tableName: "organisation" })
+    if (!sessionData) return console.log(`Session does not exists, please login to continue "focli login"`);
+    const orgs = await fetch([{ UID: sessionData.userId }], { tableName: "organisation" })
         .catch(console.log);
     if (orgs) {
         orgs.forEach(org => {
@@ -96,6 +105,21 @@ exports.load = async() => {
         });
         console.log('Organisation updated');
     }
+}
+
+exports.list = async()  => {
+    const orgByEnv = getOrgByEnv();
+    console.log(`List of Organisations: ${orgByEnv.join(' | ')}`)
+}
+
+exports.sync = async() => {
+    const orgByEnv = getOrgByEnv();
+    const answers = await prompt([{
+        type: "list",
+        name: "organisation",
+        choices: orgByEnv,
+        "message": "Select organisation to sync up"
+    }]);
 }
 
 function addToStorage(orgName, data) {

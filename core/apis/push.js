@@ -36,7 +36,7 @@ module.exports = async(data, state, config) => {
 
     if (dataConstructor) {
         postData.data[state] = dataConstructor();
-        const result = await httpClient('PUT', pushApi, { postData }, config, false)
+        const result = await httpClient('PUT', pushApi, postData, config, false)
             .catch(err => console.log(`[Push] ${err || 'unable to push data to server'}`));
         return {
             uuids,

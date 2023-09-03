@@ -2,7 +2,6 @@
     "name": "@jeli/fo-cli",
     "version": "1.0.0",
     "description": "frontendOnly cli",
-    "main": "core/index.js",
     "files": [
         "dist"
     ],
@@ -24,8 +23,10 @@
     "homepage": "https://github.com/gojecks/fo-cli.git#readme",
     "devDependencies": {},
     "scripts": {
-        "testjdb": "mocha './test/**/*.spec.js'",
-        "fcli": "node ./index.js"
+        "focli": "node ./index.js"
+    },
+    "bin": {
+        "jeli": "index.js"
     },
     "dependencies": {
         "archiver": "^5.3.1",

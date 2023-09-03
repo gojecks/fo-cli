@@ -8,6 +8,7 @@ const { prompt, orgAndAppQuest, validate } = require('../prompt');
 const fetch = require('../apis/fetch');
 const appStorage = ['FO (Free)', 'F1 ($10)', 'F2 ($15)', 'F3 ($40)', 'F4 ($80)'];
 const pf = { Monthly: 1, Quaterly: 3, 'Semi-Annual': 6, Yearly: 12 };
+const pfR = {1: 'Monthly', 3: 'Quaterly', 6: 'Semi Annual', 12: 'Yearly'};
 const organisations = Object.keys(foJson);
 
 exports.new = async() => {
@@ -152,7 +153,7 @@ exports.conf = async(organisation, appName) => {
         }
     ]);
 
-    const response = await httpClient('PUT', '/application/configuration/update', { postData }, orgAndApp)
+    const response = await httpClient('PUT', '/application/configuration/update', postData, orgAndApp)
         .catch(console.log);
 
     if (response) {
@@ -173,6 +174,25 @@ exports.load = async(organisation) => {
         });
         console.log('apps updated');
     }
+}
+
+exports.check_and_update = async(organisation, appName) => {
+    const orgAndApp = await orgAndAppQuest(foJson, false, {organisation, appName});
+    const response = await httpClient('POST', '/application/update/check', {  overrideSchemaIfNewer: true }, orgAndApp)
+        .catch(console.log);
+
+    if (response) {
+        console.log(response);
+    }
+}
+
+exports.list = async(organisation) => {
+    const orgAndApp = await orgAndAppQuest(foJson, true, {organisation});
+    const apps = foJson[orgAndApp.organisation].apps;
+    const appNames = Object.keys(apps);
+    if (!appNames.length) return console.log(`No apps created!`);
+    const details = appNames.map(name => `${name}  - ${appStorage[apps[name].storage]} - Ver(${apps[name].version}) - PF (${pfR[apps[name].payment_frequency]})`);
+    console.log(details.join('\n'));
 }
 
 

@@ -8,9 +8,7 @@ module.exports = (force) => new Promise(async(resolve, reject) => {
             // get a new token
             console.info('reauthorizing...');
             const httpRequest = httpRequestClient.httpRequestObject('POST', '/user/reauthorize', {
-                postData: {
-                    refresh_token: sessionData.tokens.refresh_token
-                }
+                refresh_token: sessionData.tokens.refresh_token
             }, null, true);
             httpRequestClient.httpClient(httpRequest).then(tokens => {
                 Object.assign(sessionData, tokens);
@@ -42,6 +40,7 @@ module.exports = (force) => new Promise(async(resolve, reject) => {
             "limit": "JDB_SINGLE"
         }
     }, null, true);
+    
     httpRequestClient.httpClient(httpRequest).then(response => {
         console.log(`User authorized: ${response.userInfo.email}`)
         session.store(response);

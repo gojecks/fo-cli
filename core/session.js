@@ -5,10 +5,9 @@ const env = require('./env');
 let cacheData = null;
 
 exports.store = (data) => {
-    let rec = {};
-    rec[env.env] = data;
-    cacheData = data;
-    utils.writeFile(filePath, rec, true);
+    cacheData = cacheData || {};
+    cacheData[env.env] = data;
+    utils.writeFile(filePath, cacheData, true);
 };
 
 exports.get = (destroyProcess) => {
@@ -16,7 +15,7 @@ exports.get = (destroyProcess) => {
         try {
             let sessionData = utils.getFile(filePath, true);
             if (sessionData) {
-                cacheData = sessionData[env.env] || null;
+                cacheData = sessionData;
             }
         } catch (e) {
             if (destroyProcess) {
@@ -26,9 +25,9 @@ exports.get = (destroyProcess) => {
         }
     }
 
-    return cacheData;
+    return cacheData[env.env];
 }
 
 exports.getKey = key => {
-    return cacheData[key];
+    return cacheData[env.env][key];
 }

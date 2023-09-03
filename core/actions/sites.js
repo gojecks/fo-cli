@@ -5,14 +5,13 @@ const utils = require('../utils');
 const foJson = utils.foJson.get();
 const { prompt, orgAndAppQuest } = require('../prompt');
 const { args } = require('../env');
-const getSitesInfo = (orgAndApp, fallback=null)  => (foJson[orgAndApp.organisation].apps[orgAndApp.appName].sites || fallback);
+const getSitesInfo = (orgAndApp, fallback = null) => (foJson[orgAndApp.organisation].apps[orgAndApp.appName].sites || fallback);
 
-
-const questions = [{
+const uploadQuestions = [{
     type: "confirm",
     name: "cleanWorkSpace",
-    default: true,
-    "message": "Clean work space before upload (Y/N)"
+    default: false,
+    "message": "Clean work space before upload (Default: NO)"
 },
 {
     type: "input",
@@ -21,10 +20,28 @@ const questions = [{
     "message": "Enter file path"
 },
 {
+    type: "input",
+    name: "version",
+    default: "v1.0.0",
+    "message": "Version (files will be written to this folder)"
+},
+{
+    type: "input",
+    name: "changeLog",
+    default: "Initial commits...",
+    "message": "Enter changeLog for this upload"
+},
+{
+    type: "confirm",
+    name: "useAsRoot",
+    default: false,
+    "message": "Use current version as root (default: No)"
+},
+{
     type: "confirm",
     name: "compress",
     default: true,
-    "message": "Compress before upload (Y/N)"
+    "message": "Compress before upload (default: Yes)"
 }
 ];
 
@@ -34,21 +51,16 @@ const compressionDetailsQuestions = [
         name: "dirPath",
         default: "dist",
         "message": "Enter Source path"
-    },
-    {
-        type: "input",
-        name: "destPath",
-        default: "dist",
-        "message": "Enter destination name (files will be written to this folder)"
-    }];
+    }
+];
 
 const promptSiteName = async (orgAndApp, blankInput) => {
-    const sites = Object.keys(getSitesInfo(orgAndApp, {}));    
+    const sites = Object.keys(getSitesInfo(orgAndApp, {}));
     if (!blankInput && !sites.length) {
         console.log('No sites created..');
         process.exit(0);
     }
-    
+
     const { name } = await prompt(blankInput ? ({
         type: "input",
         name: "name",
@@ -71,9 +83,9 @@ const promptSiteName = async (orgAndApp, blankInput) => {
  * @returns 
  */
 exports.upload = async (organisation, appName) => {
-    const orgAndApp = await orgAndAppQuest(foJson, false, {organisation, appName});
+    const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
     const name = await promptSiteName(orgAndApp);
-    const answers = await prompt(questions);
+    const answers = await prompt(uploadQuestions);
 
     if (answers.compress) {
         const compressionDetails = await prompt(compressionDetailsQuestions);
@@ -81,6 +93,7 @@ exports.upload = async (organisation, appName) => {
         console.log(`compressing dist output -> ${answers.filePath}`)
         await archiver({
             filePath: answers.filePath,
+            destPath: answers.version,
             ...compressionDetails
         });
     }
@@ -94,7 +107,9 @@ exports.upload = async (organisation, appName) => {
         formData: {
             'files[]': fs.createReadStream(answers.filePath),
             site: name,
-            path: "/"
+            type: 'fileUpload',
+            version: answers.version,
+            changeLog: answers.changeLog
         }
     };
 
@@ -102,8 +117,12 @@ exports.upload = async (organisation, appName) => {
         payLoad.formData.cleanWorkSpace = "true";
     }
 
+    if (answers.useAsRoot) {
+        payLoad.formData.useAsDefault = "true";
+    }
+
     httpClient('POST', '/sites/file/upload', payLoad, orgAndApp).then(
-        () => console.log(`Site artifact uploaded successfully!`), 
+        () => console.log(`Site artefact uploaded successfully!`),
         console.log
     );
 }
@@ -114,9 +133,9 @@ exports.upload = async (organisation, appName) => {
  * @param {*} appName 
  */
 exports.new = async (organisation, appName) => {
-    const orgAndApp = await orgAndAppQuest(foJson, false, {organisation, appName});
-    const name  = await promptSiteName(orgAndApp, true);
-    const response = await httpClient('PUT', '/sites/create', { postData: { name } }, orgAndApp)
+    const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
+    const name = await promptSiteName(orgAndApp, true);
+    const response = await httpClient('PUT', '/sites/create', { name }, orgAndApp)
         .catch(err => console.log(err));
 
     if (response) {
@@ -131,10 +150,10 @@ exports.new = async (organisation, appName) => {
  * @param {*} appName 
  */
 exports.rm = async (organisation, appName) => {
-    const orgAndApp = await orgAndAppQuest(foJson, false, {organisation, appName});
+    const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
     const name = await promptSiteName(orgAndApp);
 
-    const response = await httpClient('DELETE', '/sites/remove', { postData: { name } }, orgAndApp)
+    const response = await httpClient('DELETE', '/sites/remove', { name }, orgAndApp)
         .catch(err => console.log(err))
     if (response) {
         updateSiteInfo(orgAndApp, name, true);
@@ -143,11 +162,11 @@ exports.rm = async (organisation, appName) => {
 }
 
 exports.load = async (organisation, appName) => {
-    const orgAndApp = await orgAndAppQuest(foJson, false, {organisation, appName});
+    const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
     const response = await httpClient('GET', '/sites/list', null, orgAndApp)
         .catch(err => console.log(err))
     if (response) {
-        const sitesObject  = getSitesInfo(orgAndApp);
+        const sitesObject = getSitesInfo(orgAndApp);
         const siteNames = Object.keys(sitesObject);
         const loaded = [];
         response.forEach(site => {
@@ -157,7 +176,7 @@ exports.load = async (organisation, appName) => {
 
         // remove the sites from configuration
         siteNames.forEach(name => {
-            if (!loaded.includes(name)){
+            if (!loaded.includes(name)) {
                 delete sitesObject[name];
                 console.log(`Removing ${name} site`);
             }
@@ -168,7 +187,7 @@ exports.load = async (organisation, appName) => {
 }
 
 exports.rename = async (organisation, appName, newName) => {
-    const orgAndApp = await orgAndAppQuest(foJson, false, {organisation, appName});
+    const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
     const name = await promptSiteName(orgAndApp);
     const sitesObject = getSitesInfo(orgAndApp);
     if (newName && sitesObject) {
@@ -177,10 +196,8 @@ exports.rename = async (organisation, appName, newName) => {
         }
 
         const response = await httpClient('PUT', '/sites/rename', {
-            postData: {
-                current: name,
-                new: newName
-            }
+            current: name,
+            new: newName
         }, orgAndApp).catch(console.log);
 
         if (response) {
@@ -193,31 +210,38 @@ exports.rename = async (organisation, appName, newName) => {
 }
 
 exports.list = async (organisation, appName) => {
-    const orgAndApp = await orgAndAppQuest(foJson, false, {organisation, appName});
+    const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
     const sitesObject = getSitesInfo(orgAndApp, {});
     const sites = Object.keys(sitesObject).map(site => `${site} . ${sitesObject[site].active ? 'on' : 'off'}line`);
     console.log(sites.join('\n'));
 }
 
-exports.push_config = async(organisation, appName) => {
-    const orgAndApp = await orgAndAppQuest(foJson, false, {organisation, appName});
+/**
+ * use --configPath=FILE_PATH to upload config from a file
+ * @param {*} organisation 
+ * @param {*} appName 
+ */
+exports.push_config = async (organisation, appName) => {
+    const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
     const name = await promptSiteName(orgAndApp);
     const sitesObject = getSitesInfo(orgAndApp);
+    const postData = sitesObject[name];
     if (args.configPath) {
-        const postData  = sitesObject[name];
         const configMap = utils.readFile(args.configPath, true);
         if (configMap) {
-            Object.assign(postData, {configMap});
-            const response = await httpClient('PUT', '/sites/update', {  postData }, orgAndApp)
-            .catch(console.log);
-            if (response && response.update){
-                console.log(`Site config updated`);
-                utils.foJson.set(foJson);
-                return;
-            }
+            Object.assign(postData, { configMap });
         }
-        console.log(`Failed to update site config, please try again`);
     }
+
+    const response = await httpClient('PUT', '/sites/update', { name, configMap: postData.configMap, configOnly: true }, orgAndApp)
+        .catch(console.log);
+    if (response && response.update) {
+        console.log(`Site config updated`);
+        utils.foJson.set(foJson);
+        return;
+    }
+
+    console.log(`Failed to update site config, please try again`);
 }
 
 /**
@@ -228,18 +252,18 @@ exports.push_config = async(organisation, appName) => {
  * @param {*} config 
  * @param {*} skipSave 
  */
-function updateSiteInfo(orgAndApp, name, remove, config, skipSave  = false) {
+function updateSiteInfo(orgAndApp, name, remove, config, skipSave = false) {
     const appData = foJson[orgAndApp.organisation].apps[orgAndApp.appName];
     if (appData && !appData.sites) {
         appData.sites = {};
     }
-    
+
     if (!remove) {
         appData.sites[name] = { ...orgAndApp, ...config };
     } else {
         delete appData.sites[name]
     }
-    
+
     if (!skipSave)
         utils.foJson.set(foJson);
 }

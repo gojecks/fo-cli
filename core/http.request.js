@@ -21,8 +21,7 @@ exports.httpRequestObject = (method, path, body, appInfo, basicMode) => {
         'User-Agent': 'JELI-CLI',
         'Content-Type': 'application/json',
         'Authorization': `${(!sessionData || basicMode) ? 'Basic' :'Bearer'} ${accessToken}`,
-        'X-APP-NAME': appName,
-        'X-APP-ORGANISATION': appInfo.organisation || env.config.organisation,
+        'X-REQ-OPTS':btoa(`${appInfo.organisation || env.config.organisation}:${appName}:${appInfo.tableName||''}:${+new  Date}:`),
         'origin': env.config.origin
     });
     // push the SERVER-KEY
@@ -31,17 +30,15 @@ exports.httpRequestObject = (method, path, body, appInfo, basicMode) => {
     }
 
     var httpRequest = ({ method, uri: `${env.config.apiHost}${path}`, headers });
-    var sec = { _r: btoa(`${appName}:${appInfo.tableName}:${+new  Date}:`) };
     if (method.toLowerCase() === 'get') {
-        httpRequest.qs = Object.assign(sec, body);
+        httpRequest.qs = body;
         // httpRequest.useQuerystring = true;
     } else {
         if (body && body.formData) {
             headers['Content-Type'] = 'multipart/form-data';
-            Object.assign(body.formData, sec);
             Object.assign(httpRequest, body);
         } else {
-            httpRequest.body = JSON.stringify(Object.assign(sec, body));
+            httpRequest.body = JSON.stringify(body);
         }
     }
 
@@ -54,8 +51,7 @@ exports.setAuthorization = httpRequest  => {
 }
 
 exports.httpClient = httpRequest => new Promise((resolve, reject) => {
-    //console.log(httpRequest);
-    console.log(`making ${httpRequest.method} request to  ${httpRequest.uri}`);
+    console.log(`${httpRequest.method} ${httpRequest.uri}`);
     request(httpRequest, (error, response, body) => {
         try {
             const responseData = JSON.parse(body || '{"message": "Internal Error please try again"}');
@@ -65,7 +61,7 @@ exports.httpClient = httpRequest => new Promise((resolve, reject) => {
                 reject(responseData.message);
             }
         } catch (e) {
-            console.error(e.message);
+            console.error(`HttpClient error: ${e.message}`);
         }
     });
 })

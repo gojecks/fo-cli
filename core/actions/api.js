@@ -2,8 +2,14 @@ const httpClient = require('../http');
 const utils = require('../utils');
 const foJson = utils.foJson.get();
 const { prompt, orgAndAppQuest } = require('../prompt');
+const authTypes = ['Basic', 'Bearer', 'Any'];
+const { args } = require('../env');
 
 const getAppApis = orgAndApp => foJson[orgAndApp.organisation].apps[orgAndApp.appName].apis;
+const getDiffs = (a, b) => {
+    const keys = b.map(api => `${api.METHOD}${api.URL}`);
+    return a.filter(api => !keys.includes(`${api.METHOD}${api.URL}`));
+};
 
 exports.load = async(organisation, appName) => {
     const orgAndApp = await orgAndAppQuest(foJson, false, {organisation, appName});
@@ -11,6 +17,17 @@ exports.load = async(organisation, appName) => {
         .catch(console.log);
 
     if (response) {
+        if (args.checkDiff) {
+            const localApis =  getAppApis(orgAndApp);
+            const localDiffs = getDiffs(localApis, response);
+            if (localDiffs) {
+                console.log(`Found ${localDiffs.length} api(s) in local that are not in server`);
+                for(const api of localDiffs) {
+                    await httpClient('POST', '/application/api/create', api, orgAndApp)
+                        .catch(console.log);
+                }
+            }
+        }
         writeApi(orgAndApp, response);
     }
 }
@@ -19,7 +36,7 @@ exports.create = async(organisation, appName) => {
     const questions = [{
             type: "list",
             name: "METHOD",
-            choices: ['GET', 'POST', 'PUT', 'PATCH'],
+            choices: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
             validate: function(input) {
                 const done = this.async();
                 if (!input) {
@@ -48,7 +65,7 @@ exports.create = async(organisation, appName) => {
         {
             type: "list",
             name: "AUTH_TYPE",
-            choices: ['Basic', 'Bearer', 'Any'],
+            choices: authTypes,
             message: "Select auth type",
             default: 1
         },
@@ -80,6 +97,7 @@ exports.create = async(organisation, appName) => {
     const orgAndApp = await orgAndAppQuest(foJson, false, {organisation, appName});
     const postData = await prompt(questions);
     postData.METHOD = postData.METHOD.toLowerCase();
+    postData.AUTH_TYPE  = authTypes.indexOf(postData.AUTH_TYPE);
     const response = await httpClient('POST', '/application/api/create', postData, orgAndApp)
         .catch(console.log);
 
@@ -99,8 +117,8 @@ exports.rm = async(organisation, appName) => {
             type: "list",
             choices
         });
-
-        const response = await httpClient('DELETE', '/application/api/remove', { postData: apis[choices.indexOf(api)] }, orgAndApp)
+        const postData  = apis[choices.indexOf(api)];
+        const response = await httpClient('DELETE', '/application/api/remove', postData, orgAndApp)
             .catch(console.log);
 
         if (response) {
@@ -121,7 +139,8 @@ exports.list  = async(organisation, appName) => {
     const orgAndApp = await orgAndAppQuest(foJson, false, {organisation, appName});
     const apis = getAppApis(orgAndApp);
     if (apis){
-        console.log(apis);
+        const list = apis.map(item => `${item.METHOD.toUpperCase()}${item.URL} : AuthType<${authTypes[item.AUTH_TYPE] || item.AUTH_TYPE}>`);
+        console.log(list.join('\n'));
     }
 }
 

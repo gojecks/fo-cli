@@ -10,18 +10,6 @@ module.exports = (async() => {
             organisation: env.config.organisation,
             serviceHost: env.config.apiHost,
             http: httpClient,
-            interceptor: function(options, request) {
-                var token = "Basic " + environment.jeliApi;
-                if (request.AUTH_TYPE == 1) {
-                    var access = foTokenService.getAccessToken();;
-                    if (access) {
-                        token = "Bearer " + access.bearer;
-                    }
-                }
-
-                options.headers.Authorization = token;
-                return options;
-            },
             useFrontendOnlySchema: false,
             storage: 'memory',
             disableApiLoading: true,

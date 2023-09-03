@@ -1,5 +1,17 @@
 const inquirer = require('inquirer');
 
+exports.editor = async (data, name) => {
+    const isJson = data && (typeof data  === 'object');
+    const {editorContent} = await inquirer.prompt([
+        {
+            type: "editor",
+            name: "editorContent",
+            default: (isJson ? JSON.stringify(data, null, 3) : data || ''),
+            "message": "Edit content"
+        }
+    ]);
+    return {[name]: isJson ? JSON.parse(editorContent) : editorContent};
+};
 exports.prompt = questions => inquirer.prompt(questions);
 /**
  * 
@@ -74,4 +86,21 @@ exports.validate = {
 
         done(null, true);
     }
+}
+
+
+exports.promptName = async (lists) => {
+    const { name } = await this.prompt(!lists ? ({
+        type: "input",
+        name: "name",
+        default: "Sample Name",
+        "message": "Enter a name"
+    }) : ({
+        type: "list",
+        name: "name",
+        choices: lists,
+        "message": "Please select from list"
+    }));
+
+    return name;
 }

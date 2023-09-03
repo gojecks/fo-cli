@@ -18,8 +18,8 @@ exports.set = async() => {
     }
 }
 
-exports.list = async() => {
-    const userDefined = envVar.getConfig();
+exports.list = async(current) => {
+    const userDefined = current ? envVar.config : envVar.getConfig();
     const flatten = [];
     Object.keys(userDefined).forEach(key => {
         if (typeof userDefined[key] === 'object') {
@@ -29,7 +29,7 @@ exports.list = async() => {
         } else {
             flatten.push(`env.${key} = ${userDefined[key]}`)
         }
-    })
+    });
 
     console.log(flatten.join('\n'));
 }
