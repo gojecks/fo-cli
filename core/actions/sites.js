@@ -5,9 +5,15 @@ const utils = require('../utils');
 const foJson = utils.foJson.get();
 const { prompt, orgAndAppQuest } = require('../prompt');
 const { args } = require('../env');
-const getSitesInfo = (orgAndApp, fallback = null) => (foJson[orgAndApp.organisation].apps[orgAndApp.appName].sites || fallback);
+const getSitesInfo = (orgAndApp, fallback = null, name) => {
+    const siteObject = foJson[orgAndApp.organisation].apps[orgAndApp.appName].sites;
+    if (siteObject){
+        return (name ? siteObject[name] : siteObject)
+    }
+    return fallback;
+};
 
-const uploadQuestions = [{
+const uploadQuestions = async(currentVersion) => prompt([{
     type: "confirm",
     name: "cleanWorkSpace",
     default: false,
@@ -22,7 +28,7 @@ const uploadQuestions = [{
 {
     type: "input",
     name: "version",
-    default: "v1.0.0",
+    default: currentVersion,
     "message": "Version (files will be written to this folder)"
 },
 {
@@ -43,7 +49,7 @@ const uploadQuestions = [{
     default: true,
     "message": "Compress before upload (default: Yes)"
 }
-];
+]);
 
 const compressionDetailsQuestions = [
     {
@@ -85,7 +91,8 @@ const promptSiteName = async (orgAndApp, blankInput) => {
 exports.upload = async (organisation, appName) => {
     const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
     const name = await promptSiteName(orgAndApp);
-    const answers = await prompt(uploadQuestions);
+    const siteObject = getSitesInfo(orgAndApp, null, name);
+    const answers = await uploadQuestions(siteObject.version);
 
     if (answers.compress) {
         const compressionDetails = await prompt(compressionDetailsQuestions);
@@ -242,6 +249,32 @@ exports.push_config = async (organisation, appName) => {
     }
 
     console.log(`Failed to update site config, please try again`);
+}
+
+exports.drop_artefact = async (organisation, appName) => {
+    const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
+    const site = await promptSiteName(orgAndApp);
+    const siteObject = getSitesInfo(orgAndApp, null, site);
+    if (siteObject){
+        const versions = siteObject._versions;
+        const {version} = await prompt([{
+            type: "list",
+            name: "version",
+            default: "1.0.0",
+            "message": "Select version to remove",
+            choices: Object.keys(versions)
+        }]);
+
+        const response = await httpClient('DELETE', '/sites/remove/version', { site, version }, orgAndApp)
+        .catch(console.log);
+        if (response){
+            delete siteObject._versions[version];
+            // remove the site from version list
+            console.log(`Site artefact removed`);
+            utils.foJson.set(foJson);
+            return;
+        }
+    }
 }
 
 /**
