@@ -5,19 +5,20 @@ const utils = require('../utils');
 const foJson = utils.foJson.get();
 const { prompt, orgAndAppQuest } = require('../prompt');
 const { args } = require('../env');
+
 const getSitesInfo = (orgAndApp, fallback = null, name) => {
     const siteObject = foJson[orgAndApp.organisation].apps[orgAndApp.appName].sites;
-    if (siteObject){
+    if (siteObject) {
         return (name ? siteObject[name] : siteObject)
     }
     return fallback;
 };
 
-const uploadQuestions = async(currentVersion) => prompt([{
+const uploadQuestions = async (currentVersion) => prompt([{
     type: "confirm",
     name: "cleanWorkSpace",
-    default: false,
-    "message": "Clean work space before upload (Default: NO)"
+    default: true,
+    "message": "Clean work space before upload (Default: YES)"
 },
 {
     type: "input",
@@ -40,14 +41,14 @@ const uploadQuestions = async(currentVersion) => prompt([{
 {
     type: "confirm",
     name: "useAsRoot",
-    default: false,
-    "message": "Use current version as root (default: No)"
+    default: true,
+    "message": "Use current version as root (default: YES)"
 },
 {
     type: "confirm",
     name: "compress",
     default: true,
-    "message": "Compress before upload (default: Yes)"
+    "message": "Compress before upload (default: YES)"
 }
 ]);
 
@@ -88,50 +89,50 @@ const promptSiteName = async (orgAndApp, blankInput) => {
  * @param {*} appName 
  * @returns 
  */
-exports.upload = async (organisation, appName) => {
+exports.deploy = async (organisation, appName) => {
     const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
     const name = await promptSiteName(orgAndApp);
     const siteObject = getSitesInfo(orgAndApp, null, name);
     const answers = await uploadQuestions(siteObject.version);
+    const upload = () => {
+        if (!fs.existsSync(answers.filePath)) {
+            console.log("file doesn't exists");
+            return null;
+        }
+    
+        console.log('deploying artefact....');
+        const payLoad = {
+            formData: {
+                'files[]': fs.createReadStream(answers.filePath),
+                site: name,
+                type: 'fileUpload',
+                version: answers.version,
+                changeLog: answers.changeLog,
+                cleanWorkSpace: String(answers.cleanWorkSpace),
+                useAsDefault: String(answers.useAsRoot)
+            }
+        };
+    
+        httpClient('POST', '/sites/file/upload', payLoad, orgAndApp).then(
+            () => console.log(`Site artefact uploaded successfully!`),
+            console.log
+        );
+    }
 
     if (answers.compress) {
         const compressionDetails = await prompt(compressionDetailsQuestions);
         const archiver = require('../archiver');
-        console.log(`compressing dist output -> ${answers.filePath}`)
-        await archiver({
+        console.log(`> compressing dist from ${compressionDetails.dirPath} -> ${answers.filePath}`)
+        archiver({
             filePath: answers.filePath,
             destPath: answers.version,
             ...compressionDetails
+        }).then(upload,  err => {
+            console.error(`Error compressing file: ${err}`);
         });
+    } else {
+        upload();
     }
-
-    if (!fs.existsSync(answers.filePath)) {
-        console.log("file doesn't exists");
-        return null;
-    }
-
-    const payLoad = {
-        formData: {
-            'files[]': fs.createReadStream(answers.filePath),
-            site: name,
-            type: 'fileUpload',
-            version: answers.version,
-            changeLog: answers.changeLog
-        }
-    };
-
-    if (answers.cleanWorkSpace) {
-        payLoad.formData.cleanWorkSpace = "true";
-    }
-
-    if (answers.useAsRoot) {
-        payLoad.formData.useAsDefault = "true";
-    }
-
-    httpClient('POST', '/sites/file/upload', payLoad, orgAndApp).then(
-        () => console.log(`Site artefact uploaded successfully!`),
-        console.log
-    );
 }
 
 /**
@@ -219,7 +220,7 @@ exports.rename = async (organisation, appName, newName) => {
 exports.list = async (organisation, appName) => {
     const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
     const sitesObject = getSitesInfo(orgAndApp, {});
-    const sites = Object.keys(sitesObject).map(site => `${site} . ${sitesObject[site].active ? 'on' : 'off'}line`);
+    const sites = Object.keys(sitesObject).map(site => `+ ${site} . ${sitesObject[site].active ? 'on' : 'off'}line`);
     console.log(sites.join('\n'));
 }
 
@@ -255,9 +256,9 @@ exports.drop_artefact = async (organisation, appName) => {
     const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
     const site = await promptSiteName(orgAndApp);
     const siteObject = getSitesInfo(orgAndApp, null, site);
-    if (siteObject){
+    if (siteObject) {
         const versions = siteObject._versions;
-        const {version} = await prompt([{
+        const { version } = await prompt([{
             type: "list",
             name: "version",
             default: "1.0.0",
@@ -266,8 +267,8 @@ exports.drop_artefact = async (organisation, appName) => {
         }]);
 
         const response = await httpClient('DELETE', '/sites/remove/version', { site, version }, orgAndApp)
-        .catch(console.log);
-        if (response){
+            .catch(console.log);
+        if (response) {
             delete siteObject._versions[version];
             // remove the site from version list
             console.log(`Site artefact removed`);

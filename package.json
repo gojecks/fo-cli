@@ -21,7 +21,6 @@
         "url": "https://github.com/gojecks/fo-cli.git/issues"
     },
     "homepage": "https://github.com/gojecks/fo-cli.git#readme",
-    "devDependencies": {},
     "scripts": {
         "focli": "node ./index.js"
     },
@@ -29,7 +28,8 @@
         "jeli": "index.js"
     },
     "dependencies": {
-        "archiver": "^5.3.1",
+        "archiver": "^7.0.1",
+        "axios": "^1.7.9",
         "btoa": "^1.2.1",
         "inquirer": "^8.0.0",
         "minimist": "^1.2.0",

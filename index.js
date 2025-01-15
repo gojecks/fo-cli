@@ -19,18 +19,18 @@ try {
         }
 
         if (typeof fn != 'function') {
-            console.error(`Missing action or action does not exist. Please try command with any of the following options: ${Object.keys(fn || cmd).join('|')}`
-            );
+            console.error('Missing action or action does not exist.');
+            console.log(`Please try command with any of the following options:\n${Object.keys(fn || cmd).join('\n')}`);
             return;
         }
 
         fn.apply(cmd, otherArgs);
     } else if (isFn) {
-        cmd.call(null, otherArgs);
+        cmd.apply(cmd, otherArgs);
     } else {
         console.error(`please try the following options: ${Object.keys(cmd)}`);
     }
 } catch (e) {
     const actionList = ['app', 'config', 'editor', 'fn', 'login', 'logs', 'org', 'serve', 'sites', 'db'];
-    console.log(`command (${commandName}) fail to run \n list of available commands ${actionList.join('|')}`);
+    console.log(`failed to run command (${commandName})  \n list of available commands \n${actionList.join('\n')}`);
 }

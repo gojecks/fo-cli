@@ -16,7 +16,7 @@ let config = {
 };
 
 if (envVars) {
-    config = envVars[envVars.default] || config;
+    Object.assign(config, envVars[envVars.default] || {});
     env = envVars.default || env;
 }
 

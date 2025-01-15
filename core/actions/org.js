@@ -33,12 +33,10 @@ exports.new = async() => {
                 const sessionData = session.get();
                 var postData = [{
                     name: answers.organisation,
-                    email: sessionData.userInfo.email,
                     created: +new Date,
                     UID: sessionData.userId,
-                    role: "ROLE_SUPER_ADMIN",
                     pending: false,
-                    username: sessionData.userInfo.fullname
+                    members: []
                 }];
 
                 const response = await push(postData, 'insert', {
@@ -96,20 +94,28 @@ exports.rm = async() => {
 exports.load = async() => {
     const sessionData = session.get(true);
     if (!sessionData) return console.log(`Session does not exists, please login to continue "focli login"`);
-    const orgs = await fetch([{ UID: sessionData.userId }], { tableName: "organisation" })
+    const UID = sessionData.userId;
+    const email = sessionData.userInfo.email;
+
+    const orgs = await fetch([
+        { UID  },
+        { email },
+        {
+            members: {
+                type: '$find',
+                expressions: [{ UID }, { email }]
+            }
+        }], { tableName: "organisation" })
         .catch(console.log);
     if (orgs) {
-        orgs.forEach(org => {
-            org._data.id = org._ref;
-            addToStorage(org._data.name, org._data);
-        });
+        orgs.forEach(org => addToStorage(org.name, org));
         console.log('Organisation updated');
     }
 }
 
 exports.list = async()  => {
     const orgByEnv = getOrgByEnv();
-    console.log(`List of Organisations: ${orgByEnv.join(' | ')}`)
+    console.log(`List of Organisations:\n${orgByEnv.map(i => `> ${i}`).join('\n')}`)
 }
 
 exports.sync = async() => {

@@ -21,7 +21,7 @@ module.exports = (force) => new Promise(async(resolve, reject) => {
         return resolve(true);
     }
 
-    const form = await prompt([{
+    const postData = await prompt([{
             message: "Email address",
             type: "input",
             name: "email"
@@ -34,12 +34,7 @@ module.exports = (force) => new Promise(async(resolve, reject) => {
     ]);
 
     console.info(`Please wait while we log you in....`);
-    const httpRequest = httpRequestClient.httpRequestObject('POST', '/user/authorize', {
-        postData: {
-            param: form,
-            "limit": "JDB_SINGLE"
-        }
-    }, null, true);
+    const httpRequest = httpRequestClient.httpRequestObject('POST', '/user/authorize', postData, null, true);
     
     httpRequestClient.httpClient(httpRequest).then(response => {
         console.log(`User authorized: ${response.userInfo.email}`)

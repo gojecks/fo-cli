@@ -17,6 +17,7 @@ exports.load = async(organisation, appName) => {
         .catch(console.log);
 
     if (response) {
+        console.log(`> Loaded ${response.length} api(s)`);
         if (args.checkDiff) {
             const localApis =  getAppApis(orgAndApp);
             const localDiffs = getDiffs(localApis, response);
@@ -28,7 +29,9 @@ exports.load = async(organisation, appName) => {
                 }
             }
         }
+        
         writeApi(orgAndApp, response);
+        this.list(organisation, appName);
     }
 }
 
@@ -139,7 +142,7 @@ exports.list  = async(organisation, appName) => {
     const orgAndApp = await orgAndAppQuest(foJson, false, {organisation, appName});
     const apis = getAppApis(orgAndApp);
     if (apis){
-        const list = apis.map(item => `${item.METHOD.toUpperCase()}${item.URL} : AuthType<${authTypes[item.AUTH_TYPE] || item.AUTH_TYPE}>`);
+        const list = apis.map(item => `+ ${item.METHOD.toUpperCase()}${item.URL} : AuthType<${authTypes[item.AUTH_TYPE] || item.AUTH_TYPE}>`);
         console.log(list.join('\n'));
     }
 }

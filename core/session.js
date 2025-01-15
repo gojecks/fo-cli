@@ -14,9 +14,7 @@ exports.get = (destroyProcess) => {
     if (!cacheData) {
         try {
             let sessionData = utils.getFile(filePath, true);
-            if (sessionData) {
-                cacheData = sessionData;
-            }
+            cacheData = sessionData || {};
         } catch (e) {
             if (destroyProcess) {
                 console.log(`No active session, please login and try again`);

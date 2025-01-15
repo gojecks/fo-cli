@@ -9,7 +9,7 @@ const fetchApi = '/database/fetch';
 module.exports = async(param, appInfo) => {
     const query = {
         limit: "JDB_MAX",
-        mode: 1,
+        mode: true,
         type: "_",
         where: param
     };

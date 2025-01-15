@@ -6,9 +6,7 @@ const push = require('../apis/push');
 const httpClient = require('../http');
 const { prompt, orgAndAppQuest, validate } = require('../prompt');
 const fetch = require('../apis/fetch');
-const appStorage = ['FO (Free)', 'F1 ($10)', 'F2 ($15)', 'F3 ($40)', 'F4 ($80)'];
-const pf = { Monthly: 1, Quaterly: 3, 'Semi-Annual': 6, Yearly: 12 };
-const pfR = {1: 'Monthly', 3: 'Quaterly', 6: 'Semi Annual', 12: 'Yearly'};
+const appStorage = ['F1 (Free 100MB)', 'F2 (3 GB)'];
 const organisations = Object.keys(foJson);
 
 exports.new = async() => {
@@ -53,12 +51,6 @@ exports.new = async() => {
             name: "storage"
         },
         {
-            type: "list",
-            choices: Object.keys(pf),
-            default: 2,
-            name: "payment_frequency"
-        },
-        {
             type: "input",
             message: "Description:",
             name: "version"
@@ -87,7 +79,7 @@ exports.new = async() => {
         const sessionData = session.get();
         answers.UID = sessionData.userId;
         answers.storage = appStorage.indexOf(answers.storage);
-        answers.payment_frequency = pf[answers.payment_frequency];
+        answers.payment_frequency = 1;
         const response = await push(answers, 'insert', {
             tableName: 'user_db'
         });
@@ -122,8 +114,28 @@ exports.info = async(organisation, appName) => {
     const response = await httpClient('GET', '/application/info', null, orgAndApp)
         .catch(console.log);
 
+    const _cbreakDown = (obj, space='           ') => Object.keys(obj).map(k => {
+            const v = (obj[k]);
+            if (typeof v == 'object' ){
+                const tblObj = v.tables.reduce((accum, tb)=>(accum[tb.name]=tb.size, accum), {});
+                return `${space}${k}    ${sizeConversion(v.totalSize)}\n${space} Breakdown\n${_cbreakDown(tblObj, space + '   ')}`;
+            } 
+            return `${space}${k}\t${utils.sizeConversion(v)}`;
+        }).join('\n');
+
     if (response) {
-        console.log(response);
+        const output = ['\n',
+            `> APP_KEY\t${response.apiKey}`,
+            `> Paid\t{response.isFree ? 'Yes': 'No'}`,
+            `> FreePlan\t${response.isFree ? 'Yes' : 'No'}`,
+            '> Usage',
+            `   > apis\t${response.info.api.used} of ${response.info.api.limit}`,
+            `   > storage    ${sizeConversion(response.info.storage.used)} of ${sizeConversion(response.info.storage.limit)}`,
+            `       Breakdown`,
+            `${_cbreakDown(response.storageBreakdown)}`,
+            `> email\t${response.info.emails.used} of ${response.info.emails.limit}`
+        ]
+        console.log(output.join('\n'));
     }
 }
 
@@ -169,8 +181,8 @@ exports.load = async(organisation) => {
         .catch(console.log);
     if (apps) {
         apps.forEach(app => {
-            app._data.id = app._ref;
-            addToStorage(app._data.db_name, app._data);
+            // app._data.id = app._ref;
+            addToStorage(app.db_name, app);
         });
         console.log('apps updated');
     }
@@ -191,7 +203,7 @@ exports.list = async(organisation) => {
     const apps = foJson[orgAndApp.organisation].apps;
     const appNames = Object.keys(apps);
     if (!appNames.length) return console.log(`No apps created!`);
-    const details = appNames.map(name => `${name}  - ${appStorage[apps[name].storage]} - Ver(${apps[name].version}) - PF (${pfR[apps[name].payment_frequency]})`);
+    const details = appNames.map(name => `> ${name}  - ${appStorage[apps[name].storage] || 'F3 Custom'} - Ver<${apps[name].version}>`);
     console.log(details.join('\n'));
 }
 
