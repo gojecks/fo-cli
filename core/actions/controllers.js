@@ -1,7 +1,7 @@
 const httpClient = require('../http');
 const utils = require('../utils');
 const foJson = utils.foJson.get();
-const { editor, promptName, orgAndAppQuest } = require('../prompt');
+const { editor, promptName } = require('../prompt');
 const getAppApis = orgAndApp => {
     const apis = foJson[orgAndApp.organisation].apps[orgAndApp.appName].apis;
     return (apis || []).filter(item => !item.NO_CTRL).map(item => item.CTRL_NAME);
@@ -23,35 +23,47 @@ const pushController = async (orgAndApp, apiName) => {
     }
 };
 
-exports.load = async (organisation, appName) => {
-    const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
-    const apis = getAppApis(orgAndApp);
-    for (const api of apis) {
-        try {
-            const filePath = `functions/controller/${api}.php`;
-            const { content } = await httpClient('GET', '/cms/file', { filePath }, orgAndApp);
-            if (content) {
-                console.log(`contents loaded for ${api} hook`);
-                const hookFilePath = `${orgAndApp.organisation}/${orgAndApp.appName}/${filePath}`;
-                utils.writeFile(hookFilePath, content);
+class Controllers {
+    static withInstance = {
+        skip: [],
+        action: {
+            push: false,
+            push_all: false,
+            rm: false,
+            list: false,
+            load: false
+        }
+    };
+
+    static async load(orgAndApp){
+        const apis = getAppApis(orgAndApp);
+        for (const api of apis) {
+            try {
+                const filePath = `functions/controller/${api}.php`;
+                const { content } = await httpClient('GET', '/cms/file', { filePath }, orgAndApp);
+                if (content) {
+                    console.log(`contents loaded for ${api} hook`);
+                    const hookFilePath = `${orgAndApp.organisation}/${orgAndApp.appName}/${filePath}`;
+                    utils.writeFile(hookFilePath, content);
+                }
+            } catch (e) {
+                console.log(`Failed to load ${api} content`)
             }
-        } catch (e) {
-            console.log(`Failed to load ${api} content`)
+        }
+    };
+    
+    static async push (orgAndApp){
+        const apis = getAppApis(orgAndApp);
+        const apiName = await promptName(apis);
+        await pushController(orgAndApp, apiName);
+    }
+    
+    static async push_all(){
+        const apis = getAppApis(orgAndApp);
+        for(const api of apis) {
+            await pushController(orgAndApp, api);
         }
     }
-};
-
-exports.push = async (organisation, appName) => {
-    const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
-    const apis = getAppApis(orgAndApp);
-    const apiName = await promptName(apis);
-    await pushController(orgAndApp, apiName);
 }
 
-exports.push_all = async (organisation, appName) => {
-    const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
-    const apis = getAppApis(orgAndApp);
-    for(const api of apis) {
-        await pushController(orgAndApp, api);
-    }
-}
+module.exports = Controllers;

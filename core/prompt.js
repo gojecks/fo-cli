@@ -20,8 +20,11 @@ exports.prompt = questions => inquirer.prompt(questions);
  * @param {*} fromCmd 
  * @returns 
  */
-exports.orgAndAppQuest = (foJson, skipApp, cmdData) => {
+exports.orgAndAppQuest = (skipApp, cmdData) => {
     return new Promise(async(resolve, reject) => {
+        const utils = require('./utils');
+        const foJson = utils.foJson.get();
+
         const organisations = Object.keys(foJson);
         if (!organisations.length) {
             console.log(`No Organisation created please load existing  or create a new one`);
@@ -49,7 +52,7 @@ exports.orgAndAppQuest = (foJson, skipApp, cmdData) => {
             }
 
             if (!apps.includes(cmdData.appName)){
-                this.prompt({
+                const appResponse = await this.prompt({
                     type: "list",
                     name: "appName",
                     "message": "Select application",
@@ -64,16 +67,37 @@ exports.orgAndAppQuest = (foJson, skipApp, cmdData) => {
                         done(null, true);
                     },
                     choices: apps
-                }).then(value => {
-                    Object.assign(cmdData, value);
-                    resolve(cmdData);
                 });
-            } else {
-                resolve(cmdData);
+                
+                Object.assign(cmdData, appResponse);
             }
-        } else {
-            resolve(cmdData);
         }
+
+        const app = foJson[cmdData.organisation].apps[cmdData.appName];
+        const deployments = app?.metadata?.deployments || [];
+        if (deployments.length){
+            const envs = {
+                default: null
+            };
+
+            for (const deployment of deployments) {
+                if (deployment.standalone && deployment.instance.id) {
+                    envs[deployment.envName] = deployment.instance.domains[0].name;
+                }
+            }
+
+            const { env } = await this.prompt([{
+                type: "list",
+                choices: Object.keys(envs),
+                message: "Select Environment",
+                name: "env"
+            }]);
+
+            // set environment
+            cmdData.env = envs[env];
+        }
+
+        resolve(cmdData);
     });
 }
 

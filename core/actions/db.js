@@ -2,7 +2,7 @@ const fs = require('fs');
 const httpClient = require('../http');
 const utils = require('../utils');
 const foJson = utils.foJson.get();
-const { editor, promptName, orgAndAppQuest } = require('../prompt');
+const { editor, promptName  } = require('../prompt');
 const { v4: uuidv4 } = require('uuid');
 const envVar = require('../env');
 
@@ -22,8 +22,7 @@ const getDbObj = (orgAndApp, type) => {
 };
 
 
-const queryEditor = async (organisation, appName, isNew) => {
-    const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
+const queryEditor = async (orgAndApp, isNew) => {
     const queries = getDbObj(orgAndApp, 'queries');
     const name = await promptName(!isNew ? Object.keys(queries) : null);
     if (!name || (isNew && queries[name])) {
@@ -36,8 +35,7 @@ const queryEditor = async (organisation, appName, isNew) => {
     console.log(`${name} query ${isNew ? 'added' : 'editted'}, run query push to save queries to server`);
 }
 
-const tableEditor = async (organisation, appName, isNew) => {
-    const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
+const tableEditor = async (orgAndApp, isNew) => {
     const tables = getDbObj(orgAndApp, 'tables');
     const name = await promptName(isNew ? null : Object.keys(tables));
     if (isNew && tables[name]) {
@@ -118,21 +116,8 @@ const pushHook = async (orgAndApp, hookName) => {
     }
 }
 
-exports.load = async (organisation, appName) => {
-    const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
-    const orders = ['schema.load_refs', 'schema.load', 'query.load', 'hook.load'];
-    orders.forEach(async (order) => {
-        const splt = order.split('.');
-        const action = this[splt.shift()];
-        if (action) {
-            await action[splt.pop()](orgAndApp.organisation, orgAndApp.appName);
-        }
-    });
-}
-
-exports.hook = {
-    load: async (organisation, appName) => {
-        const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
+class Hook {
+    static async load(orgAndApp){
         const hooks = listHooks(orgAndApp)
 
         for (const hook of hooks) {
@@ -148,44 +133,45 @@ exports.hook = {
                 console.log(`Failed to load ${hook} content`)
             }
         }
-    },
-    push: async (organisation, appName) => {
-        const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
+    }
+
+    static async push(orgAndApp){
         const hooks = listHooks(orgAndApp)
         const hookName = await promptName(hooks);
         await pushHook(orgAndApp, hookName);
-    },
-    push_all: async (organisation, appName) => {
-        const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
+    }
+
+    static async push_all(orgAndApp){
         const hooks = listHooks(orgAndApp)
         for (const hook of hooks) {
             await pushHook(orgAndApp, hook);
         }
     }
-};
+}
 
-exports.query = {
-    list: async (organisation, appName) => {
-        const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
+class Query {
+    static async list(orgAndApp){
         const queries = getDbObj(orgAndApp, 'queries');
         console.log(Object.keys(queries).map(q => `> ${q} | Type<${(queries[q].type || 'Read').toUpperCase()}> | Table#${queries[q].tableName || ''}`).join('\n'));
-    },
-    add: async (organisation, appName) => {
-        queryEditor(organisation, appName, true);
-    },
-    edit: async (organisation, appName) => {
-        queryEditor(organisation, appName);
-    },
-    rm: async (organisation, appName) => {
-        const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
+    }
+
+    static async add(orgAndApp){
+        queryEditor(orgAndApp, true);
+    }
+
+    static async edit(orgAndApp){
+        queryEditor(orgAndApp);
+    }
+
+    static async rm(orgAndApp){
         const queries = getDbObj(orgAndApp, 'queries');
         const name = await promptName(Object.keys(queries));
         delete queries[name];
         utils.foJson.set(foJson);
         console.log(`${name} query removed, run query push to save changes to server`)
-    },
-    rename: async (organisation, appName) => {
-        const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
+    }
+
+    static async rename(orgAndApp){
         const queries = getDbObj(orgAndApp, 'queries');
         const oldName = await promptName(Object.keys(queries));
         const newName = await promptName(null)
@@ -193,9 +179,9 @@ exports.query = {
         delete queries[oldName];
         utils.foJson.set(foJson);
         console.log(`${oldName} query rename -> ${newName}, run query push to save changes to server`);
-    },
-    push: async (organisation, appName) => {
-        const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
+    }
+
+    static async push(orgAndApp){
         const queries = getDbObj(orgAndApp, 'queries');
         const response = await httpClient('PUT', '/database/queries', queries, orgAndApp)
             .catch(console.log);
@@ -203,9 +189,9 @@ exports.query = {
         if (response) {
             console.log(`Queries saved!`);
         }
-    },
-    load: async (organisation, appName) => {
-        const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
+    }
+
+    static async load(orgAndApp){
         const queries = getDbObj(orgAndApp, 'queries');
         const response = await httpClient('GET', '/database/queries', null, orgAndApp)
             .catch(console.log);
@@ -223,7 +209,8 @@ exports.query = {
             utils.foJson.set(foJson);
             console.log(`Local queries updated, added: \n${added.join('\n')} queries`);
         }
-    },
+    }
+
     /**
      * 
      * @param {*} organisation 
@@ -231,8 +218,7 @@ exports.query = {
      * @param {*} id 
      * @param {*} values
      */
-    tryitout: async (organisation, appName, id) => {
-        const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
+    static async tryitout(orgAndApp, id){
         const queries = getDbObj(orgAndApp, 'queries');
         if (!id)
             id = await promptName(Object.keys(queries));
@@ -241,14 +227,12 @@ exports.query = {
         const response = await httpClient('POST', '/database/query', { id, values }, orgAndApp)
             .catch(console.log);
 
-        if (response)
-            console.log(response);
+        if (response) console.log(response);
     }
 }
 
-exports.schema = {
-    load: async (organisation, appName) => {
-        const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
+class Schema {
+    static async load(orgAndApp){
         const resource = getDbObj(orgAndApp, 'refs');
         if (!resource.lastSyncedDate) {
             console.log(`Nothing to load, please first sync resource from server `);
@@ -265,9 +249,9 @@ exports.schema = {
             utils.foJson.set(foJson);
             console.log(`Schema loaded and saved!`);
         }
-    },
-    load_refs: async (organisation, appName) => {
-        const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
+    }
+
+    static async load_refs(orgAndApp){
         const resource = getDbObj(orgAndApp, 'refs');
         const response = await httpClient('GET', '/database/resource', null, orgAndApp)
             .catch(console.log);
@@ -277,9 +261,9 @@ exports.schema = {
             utils.foJson.set(foJson);
             console.log('Resources loaded!');
         }
-    },
-    sync: async (organisation, appName, table) => {
-        const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
+    }
+
+    static async sync(orgAndApp, table){
         const resource = getDbObj(orgAndApp, 'refs');
         const tables = getDbObj(orgAndApp, 'tables');
         console.log('Sync state inProgress..');
@@ -310,18 +294,17 @@ exports.schema = {
     }
 }
 
-exports.table = {
-    list: async (organisation, appName) => {
-        const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
+class Table {
+    static async list(orgAndApp){
         const resource = getDbObj(orgAndApp, 'refs');
         if (!resource.resourceManager) return console.log(`No tables created!`)
         const data = Object.keys(resource.resourceManager).map(k => {
             return `+ ${k}`
         });
         console.log(data.join('\n'));
-    },
-    drop: async (organisation, appName) => {
-        const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
+    }
+
+    static async drop(orgAndApp){
         const resource = getDbObj(orgAndApp, 'refs');
         if (!resource.resourceManager) return console.log(`No tables created!`)
         const tableName = await promptName(Object.keys(resource.resourceManager));
@@ -342,9 +325,9 @@ exports.table = {
                 console.log(`unable to drop table ${tableName} from server`);
             }
         }
-    },
-    rename: async (organisation, appName) => {
-        const orgAndApp = await orgAndAppQuest(foJson, false, { organisation, appName });
+    }
+
+    static async rename(orgAndApp){
         const resource = getDbObj(orgAndApp, 'refs');
         if (!resource.resourceManager) return console.log(`No tables created!`)
         const oldName = await promptName(Object.keys(resource.resourceManager));
@@ -370,11 +353,52 @@ exports.table = {
                 console.log(`table renamed from ${oldName} -> ${newName}`);
             }
         }
-    },
-    add: async (organisation, appName) => {
-        tableEditor(organisation, appName, true);
-    },
-    edit: async (organisation, appName) => {
-        tableEditor(organisation, appName, false);
+    }
+
+    static async add(orgAndApp){
+        tableEditor(orgAndApp, true);
+    }
+
+    static async edit(orgAndApp){
+        tableEditor(orgAndApp, false);
     }
 }
+
+class DB {
+    static withInstance = {
+        skip: [],
+        action: {
+            push: false,
+            push_all: false,
+            rename: false,
+            edit: false,
+            add: false,
+            rm: false,
+            list: false,
+            drop: false,
+            rename: false,
+            load_refs: false,
+            load: false,
+            tryitout: false,
+            sync: false
+        }
+    };
+
+    static async load(orgAndApp) {
+        const orders = ['schema.load_refs', 'schema.load', 'query.load', 'hook.load'];
+        orders.forEach(async (order) => {
+            const splt = order.split('.');
+            const action = this[splt.shift()];
+            if (action) {
+                await action[splt.pop()](orgAndApp.organisation, orgAndApp.appName);
+            }
+        });
+    }
+    
+    static hook = Hook;
+    static query = Query;
+    static schema = Schema;
+    static table = Table;
+}
+
+module.exports = DB;

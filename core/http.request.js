@@ -30,42 +30,39 @@ exports.httpRequestObject = (method, path, body, appInfo, basicMode) => {
         headers['X-AUTH-SERVER-KEY'] = env.config.authServerKey;
     }
 
-    var httpRequest = ({ method, url: `${env.config.apiHost}${path}`, headers });
+    const host = appInfo?.env ? `https://${appInfo?.env}/api` : env.config.apiHost; 
+    const httpRequest = ({ method, url: `${host}${path}`, headers });
     if (method.toLowerCase() === 'get') {
         httpRequest.params = body;
-        // httpRequest.useQuerystring = true;
     } else {
-        if (body && body.formData) {
-            headers['Content-Type'] = 'multipart/form-data';
-            // attach upload listener
-            const maxRate = 1024 * 1024;
-            Object.assign(httpRequest, {
-                maxRate: [maxRate],
-                onUploadProgress: ({progress, rate}) => {
-                    console.log(`Upload [${(progress*100).toFixed(2)}%]: ${sizeConversion(rate | maxRate)}/s`)
-                }
-            });
-            // set the body
-            body = body.formData;
-        }
-
         httpRequest.data = body;
     }
 
     return httpRequest;
 }
 
-exports.setAuthorization = httpRequest => {
-    const token = session.getKey('tokens');
-    httpRequest.headers['Authorization'] = `Bearer ${token.bearer}`;
+exports.setAuthorization = (httpRequest, token) => {
+    token = token || session.getKey('tokens').bearer;
+    httpRequest.headers['Authorization'] = `Bearer ${token}`;
 }
 
 exports.httpClient = httpRequest => new Promise((resolve, reject) => {
-    console.log(`${httpRequest.method} ${httpRequest.url}`);
+    if (httpRequest.data && httpRequest.data.formData){
+        httpRequest.data = httpRequest.data.formData;
+        const maxRate = 1 * 1024 * 1024;
+        Object.assign(httpRequest, {
+            maxRate: [maxRate],
+            onUploadProgress: ({ progress, rate }) => {
+                console.log(`Upload [${(progress * 100).toFixed(2)}%]: ${sizeConversion(rate | maxRate)}/s`)
+            }
+        });
+       httpRequest.headers['Content-Type'] = 'multipart/form-data';
+    }
+
+    console.log(`Processing Request ${httpRequest.url}...`);
     request(httpRequest).catch(err => {
         if (err.response) {
-            const data = err.response.data || {'message': 'Error performing resquest, please try again'};
-            console.error(`HttpClient error: ${data.message}`);
+            const data = err.response.data || { 'message': 'Error performing request, please try again' };
             reject(data);
         }
     }).then(res => {

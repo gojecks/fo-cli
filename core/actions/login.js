@@ -1,7 +1,7 @@
 const authenticator = require("../apis/authenticator")
 
 module.exports = async(force) => {
-    const response = await authenticator(!!force)
+    const response = await authenticator.connect(!!force)
         .catch(console.log);
     console.log(response);
 }

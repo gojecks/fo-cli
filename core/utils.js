@@ -41,16 +41,33 @@ exports.readFile = (filePath, toJSON = false) => {
 }
 
 exports.writeFile = (filePath, content, toJSON = false) => {
-    fs.writeFileSync(this.getPath(filePath), (toJSON ? JSON.stringify(content, null, 3) : content));
+    try {
+        fs.writeFileSync(this.getPath(filePath), (toJSON ? JSON.stringify(content, null, 3) : content));
+    } catch (e){
+        console.log(`Unable to write content ${content}`);
+    } 
 }
 
 exports.createFolder = (folderPath, recursive) => {
     fs.mkdirSync(folderPath, {recursive});
 }
 
+exports.saveRawData = (fileName, data, append = true) => {
+    const filePath = this.getPath(fileName);
+    try {
+        if (append) {
+            fs.appendFileSync(filePath, data + "\n");
+        } else {
+           fs.writeFileSync(filePath, data); 
+        }
+    } catch (e){
+        console.log(`Unable to write to file reasons: ${e.message}`)
+    }
+}
+
 exports.sizeConversion = (size, c = 0) => {
     if (size > 1024)
         return this.sizeConversion(size / 1024, ++c);
 
-    return `${size} ${sizes[c]}`;
+    return `${(size || 0).toFixed(2)} ${sizes[c]}`;
 };
